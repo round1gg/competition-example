@@ -1,8 +1,21 @@
 import { MongoMemoryServer } from 'mongodb-memory-server'
+import { MongoClient } from 'mongodb' 
 
-class Database {
+export default class Database {
 
-  private _mongod: MongoMemoryServer | null = null
+  private _mongod: Promise<MongoMemoryServer>
+  private _Uri: string = ""
+  public get Uri() {
+    return this._Uri
+  }
+
+  public isReady(): Promise<any> {
+    return new Promise((res) => {
+      this._mongod.then(() => {
+        res(true)
+      })
+    })
+  }
   
   private static instance: Database
   public static getInstance(): Database {
@@ -12,20 +25,20 @@ class Database {
     return Database.instance
   }
 
-  constructor() {
-    this.connect()   
-  }
-
-  public connect = async () => {
-    this._mongod = await MongoMemoryServer.create()
+  private constructor() {
+    this._mongod = new Promise(async (res, rej) => {
+      console.log('connecting to database...')
+      const server = await MongoMemoryServer.create()
+      this._Uri = server.getUri()
+      console.log('database connected.')
+      return
+    })
   }
 
   public stop = async () => {
-    await this._mongod?.stop()
-  }
-
-  public getUri = () => {
-    return this._mongod?.getUri
-
+    const mongod = await this._mongod
+    mongod.stop()
   }
 }
+
+
